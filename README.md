@@ -1,88 +1,281 @@
 # Structured Bloom
 
-Structured Bloom은 사용자의 현재 기분과 사용 가능한 시간을 바탕으로  
-가볍게 실천할 수 있는 회복 활동을 추천하는 웹 서비스입니다.
+**React + FastAPI + OpenAI API 기반 AI 웹 서비스**
 
-## 1. Project Overview
+> **Status: Re-validation in Progress**  
+> AI웹융합 과제로 구현한 기존 코드를 다시 실행하면서  
+> 요청·응답 흐름, Validation, 오류 처리와 직접 구현 범위를 재검증하고 있습니다.
 
-현대인은 쉬어야 한다는 것을 알면서도, 막상 시간이 생기면 무엇을 해야 할지 모르는 경우가 많습니다.  
-Structured Bloom은 사용자가 현재의 기분과 여유 시간을 선택하면, 상황에 맞는 작은 회복 활동을 추천해주는 서비스입니다.
+---
 
-이 프로젝트는 AI웹융합 과제용 MVP로 제작되었으며, 복잡한 입력 없이 간단한 선택만으로 사용자에게 맞는 활동을 제안하는 것을 목표로 합니다.
+## Project Overview
 
-## 2. Service URL
+Structured Bloom은 사용자가 현재 상태를 자유로운 문장으로 입력하고  
+사용 가능한 시간을 선택하면, LLM이 입력 내용을 구조화하여  
+현재 상태와 실행 가능한 작은 회복 활동을 제안하는 웹 서비스입니다.
 
-- Introduction Page: https://s23.aiweb2026.site
-- App Page: https://s23.aiweb2026.site/app/
-- GitHub Repository: https://github.com/lightleaping/s23.aiweb2026.site
+단순한 자연어 응답을 화면에 그대로 출력하는 대신,  
+LLM에 정해진 JSON 형식을 요청하고 Backend에서 Pydantic Schema로 검증한 뒤  
+Frontend가 정해진 필드에 맞춰 결과를 렌더링하도록 구성했습니다.
 
-## 3. Main Concept
+---
 
-Structured Bloom의 핵심은 사용자가 직접 복잡한 계획을 세우지 않아도 된다는 점입니다.
+## Current Flow
 
-사용자는 현재 상태와 가능한 시간만 선택합니다.  
-서비스는 그 조건을 바탕으로 다음과 같은 활동을 추천합니다.
-
-- 짧은 휴식
-- 가벼운 정리
-- 감각 전환
-- 간단한 움직임
-- 생각 비우기
-- 집중 회복
-
-## 4. Key Features
-
-| Feature | Description |
-|---|---|
-| Mood Selection | 현재 기분이나 상태를 선택합니다. |
-| Time Selection | 사용 가능한 시간을 선택합니다. |
-| Activity Recommendation | 입력 조건에 맞는 활동을 추천합니다. |
-| Simple Result UI | 추천 결과를 카드 형태로 보여줍니다. |
-| Responsive UI | PC와 모바일 화면에서 사용할 수 있도록 구성했습니다. |
-
-## 5. Workflow
-
-```txt
-User Input
-  ↓
-Mood / Time Selection
-  ↓
-Condition Matching
-  ↓
-Activity Recommendation
-  ↓
-Result Card Display
+```text
+User
+↓
+React
+↓
+POST /analyze
+↓
+FastAPI
+↓
+OpenAI API (gpt-4o-mini)
+↓
+JSON Text
+↓
+json.loads()
+↓
+Pydantic Validation
+↓
+API Response
+↓
+React Result UI
 ```
 
-## 6. Tech Stack
+---
 
-| Category | Stack |
+## Input
+
+사용자는 두 가지 정보를 입력합니다.
+
+1. **현재 상태**
+   - 자유 텍스트 입력
+   - Pydantic을 통한 입력값 검증
+
+2. **사용 가능한 시간**
+   - 5분
+   - 10분
+   - 20분
+   - 30분
+   - 1시간
+   - 2시간
+   - 반나절
+   - 상관없음
+
+Frontend Request 예시:
+
+```json
+{
+  "text": "오늘 너무 지치고 머리가 복잡해. 쉬어야 하는데 뭘 해야 할지 모르겠어.",
+  "available_time": "20min"
+}
+```
+
+---
+
+## Structured Output
+
+LLM에는 다음 필드를 포함한 JSON 객체만 반환하도록 요청합니다.
+
+```text
+emotion
+energy
+situation
+goal
+template
+background
+color_theme
+flower_theme
+
+activity
+ ├─ title
+ ├─ time
+ ├─ burden
+ ├─ first_action
+ └─ steps
+
+drink
+space
+clothes
+mood_message
+reason
+```
+
+Backend는 응답 문자열을 JSON으로 변환한 뒤  
+`AnalyzeResponse` Pydantic Model로 검증합니다.
+
+---
+
+## Backend
+
+### API
+
+```text
+GET  /
+POST /analyze
+```
+
+### POST /analyze
+
+처리 흐름:
+
+```text
+AnalyzeRequest
+→ user_context 구성
+→ OpenAI Responses API 호출
+→ response.output_text
+→ json.loads()
+→ AnalyzeResponse
+→ API Response
+```
+
+현재 OpenAI 호출 모델:
+
+```text
+gpt-4o-mini
+```
+
+### Request Validation
+
+```python
+class AnalyzeRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=800)
+    available_time: Optional[str] = None
+```
+
+### Response Validation
+
+Pydantic의 `Literal`을 사용해 일부 필드의 허용값을 제한합니다.
+
+예:
+
+```text
+energy
+→ low / medium / high
+
+goal
+→ quiet_rest
+→ light_reset
+→ focus_restart
+→ outside_refresh
+→ emotional_comfort
+
+burden
+→ 낮음 / 보통 / 높음
+```
+
+LLM이 `burden`을 `중간`으로 반환할 경우  
+`field_validator`에서 `보통`으로 정규화합니다.
+
+---
+
+## Frontend
+
+React에서는 주요 상태를 다음과 같이 관리합니다.
+
+```text
+text
+availableTime
+result
+loading
+```
+
+처리 흐름:
+
+```text
+사용자 입력
+→ analyzeMood()
+→ fetch()
+→ POST /analyze
+→ JSON Response
+→ setResult()
+→ Result UI Rendering
+```
+
+구현된 UI 처리:
+
+- 빈 입력 확인
+- 요청 중 Loading 상태
+- API 실패 시 오류 메시지
+- 감정·에너지·상황 표시
+- 추천 활동과 단계 표시
+- 추천 이유와 첫 행동 표시
+- 응답의 theme 값을 이용한 화면 스타일 변경
+
+---
+
+## Tech Stack
+
+| Area | Technology |
 |---|---|
 | Frontend | React, JavaScript, CSS, Vite |
 | Backend | Python, FastAPI |
+| LLM | OpenAI API (`gpt-4o-mini`) |
+| Validation | Pydantic |
+| Environment | python-dotenv |
 | Introduction Page | HTML, CSS, zero-md |
-| Deployment | GitHub, s23.aiweb2026.site |
 | Version Control | Git, GitHub |
 
-## 7. Project Structure
+---
 
-```txt
-structured-bloom/
+## Project Structure
+
+```text
+structured-bloom-ai-service/
 ├── backend/
+│   ├── main.py
+│   └── requirements.txt
+│
 ├── frontend/
 │   ├── public/
 │   ├── src/
+│   │   ├── App.jsx
+│   │   └── ...
 │   ├── package.json
 │   └── vite.config.js
+│
 ├── app/
-├── README.md
+│   └── static frontend build
+│
 ├── contents.md
 ├── index.html
 ├── style.css
-└── screenshot.png
+├── screenshot.png
+└── README.md
 ```
 
-## 8. How to Run
+---
+
+## How to Run
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+Backend는 환경변수에서 OpenAI API Key를 읽습니다.
+
+```text
+OPENAI_API_KEY=your_api_key
+```
+
+`.env` 파일은 GitHub에 포함하지 않습니다.
+
+실행:
+
+```bash
+uvicorn main:app --reload
+```
+
+기본 주소:
+
+```text
+http://127.0.0.1:8000
+```
 
 ### Frontend
 
@@ -92,59 +285,99 @@ npm install
 npm run dev
 ```
 
-Local URL:
+기본 개발 주소:
 
-```txt
+```text
 http://localhost:5173
 ```
 
-### Backend
+---
 
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
+## Deployment
 
-백엔드 실행 파일명은 실제 프로젝트 구조에 따라 다를 수 있습니다.
+과제 구현 당시 Frontend와 Backend를 별도로 구성했습니다.
 
-## 9. AI Usage and Future Expansion
+- Introduction: `https://s23.aiweb2026.site`
+- App: `https://s23.aiweb2026.site/app/`
+- Backend: Hugging Face Space
 
-현재 MVP는 사용자의 선택값을 기준으로 사전에 구성된 추천 데이터를 반환하는 방식입니다.  
-즉, 현재 버전에서는 외부 AI API를 필수로 사용하지 않고, 추천 서비스의 기본 흐름을 먼저 구현했습니다.
+현재 Repository의 Frontend 코드에는 Backend URL이 직접 지정되어 있으며,  
+재검증 과정에서 환경별 설정으로 분리할 예정입니다.
 
-향후에는 다음과 같은 AI 기능으로 확장할 수 있습니다.
+---
 
-- 사용자의 감정 상태에 맞는 자연어 추천 문장 생성
-- 사용자의 이전 선택 기록을 기반으로 한 개인화 추천
-- 활동 완료 후 피드백 분석
-- 감정 변화 흐름 분석
-- 상황별 회복 루틴 자동 생성
+## Current Status
 
-## 10. My Role
+### Confirmed in Repository Code
 
-- 서비스 아이디어 기획
-- 사용자 입력 구조 설계
-- 추천 결과 데이터 구성
-- React 기반 화면 구현
-- CSS 기반 UI 디자인
-- FastAPI 백엔드 구조 구성
-- GitHub 업로드 및 과제 제출용 문서 정리
+- React 사용자 입력 및 결과 UI
+- FastAPI Backend
+- `POST /analyze`
+- OpenAI API 호출
+- `gpt-4o-mini`
+- Prompt 기반 JSON 출력 요청
+- `json.loads()` Parsing
+- Pydantic Request / Response Validation
+- `field_validator`
+- Loading 처리
+- API 오류 처리
+- Frontend → Backend 요청 코드
 
-## 11. Limitations
+### Re-validation in Progress
 
-현재 버전은 MVP 단계이기 때문에 다음과 같은 한계가 있습니다.
+- Local Backend 실행
+- Local Frontend 실행
+- Frontend ↔ Backend End-to-End 연결
+- 실제 OpenAI API 응답 확인
+- malformed JSON 처리
+- Validation Error 처리
+- 직접 구현 범위 재확인
 
-- 실제 사용자 기록 저장 기능은 포함하지 않았습니다.
-- 추천 결과는 사전 정의된 데이터 기반으로 제공됩니다.
-- 실제 LLM 또는 감정 분석 모델은 아직 연동하지 않았습니다.
-- 로그인, 데이터베이스, 장기 기록 분석 기능은 포함하지 않았습니다.
+---
 
-## 12. Future Improvements
+## Current Limitations
 
-- 사용자 기록 저장 기능 추가
-- 활동 완료 여부 체크 기능 추가
-- 감정 변화 시각화
-- LLM 기반 추천 문장 생성
-- 모바일 웹앱 형태로 확장
-- 개인별 회복 루틴 추천 기능 추가
+- 사용자 계정 기능이 없습니다.
+- 사용자 기록을 저장하는 Database가 없습니다.
+- 테스트 코드가 현재 Repository에서 확인되지 않습니다.
+- LLM의 JSON 형식 준수를 Prompt에 의존합니다.
+- JSON 형식을 지키지 않으면 Parsing 오류가 발생할 수 있습니다.
+- OpenAI API 및 Validation 관련 오류 처리가 세분화되어 있지 않습니다.
+- Frontend의 Backend URL이 현재 코드에 직접 지정되어 있습니다.
+- Backend CORS 설정은 현재 `http://localhost:5173`만 명시되어 있습니다.
+- 의료적 진단이나 치료를 제공하는 서비스가 아닙니다.
+
+---
+
+## Next Steps
+
+1. Local Backend / Frontend 재실행
+2. End-to-End 요청 흐름 확인
+3. Backend URL 환경변수 분리
+4. OpenAI API 오류 처리 개선
+5. malformed JSON / Validation Failure 처리 검증
+6. Backend API 테스트 추가
+7. 실제 실행 결과와 README 동기화
+
+---
+
+## My Role
+
+AI웹융합 과제에서 다음 영역을 구성했습니다.
+
+- 서비스 아이디어 및 사용자 입력 구조
+- React 기반 사용자 화면
+- FastAPI Backend 구조
+- OpenAI API 연결
+- LLM 출력 형식 설계
+- Pydantic Response Schema
+- Frontend와 Backend 연결
+
+현재는 기존 구현을 다시 실행하면서  
+각 코드의 역할을 설명하고 직접 수정·검증할 수 있는 상태로 복습하고 있습니다.
+
+---
+
+## Repository
+
+https://github.com/lightleaping/structured-bloom-ai-service
