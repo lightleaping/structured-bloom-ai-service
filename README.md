@@ -4,7 +4,7 @@
 **React, FastAPI, OpenAI API, and Pydantic Validation**
 
 <p>
-  <img src="https://img.shields.io/badge/Status-Re--validation%20in%20Progress-EAA12B?style=flat-square" alt="Re-validation in Progress">
+  <img src="https://img.shields.io/badge/Status-Local%20Re--validation%20Complete-2EA44F?style=flat-square" alt="Local Re-validation Complete">
   <img src="https://img.shields.io/badge/FastAPI-Backend-21AFC4?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/React-Frontend-3561D8?style=flat-square&logo=react&logoColor=white" alt="React">
   <img src="https://img.shields.io/badge/OpenAI-API-151F32?style=flat-square" alt="OpenAI API">
@@ -15,9 +15,9 @@
 > **FastAPI와 Pydantic으로 응답 형식을 검증한 뒤 React UI에 연결하는**
 > AI 웹 서비스 프로젝트입니다.
 >
-> **Status: Re-validation in Progress**  
-> 기존 구현을 다시 실행하면서 요청·응답 흐름과 직접 수정·설명 가능한 범위를 재검증하고 있습니다.
-
+> **Status: Local Re-validation Complete**
+> 현재 GitHub 코드 기준으로 Backend·Frontend 로컬 실행, OpenAI API 호출, End-to-End 흐름, Production Build, ESLint를 재검증했습니다.
+> Hugging Face 배포 Backend는 별도 Space 저장소에서 운영되는 이전 구현이며, 현재 GitHub Backend와 코드 버전이 다릅니다.
 ---
 
 ## Why This Project
@@ -64,9 +64,9 @@ React UI가 각 결과를 정해진 영역에 표시하도록 구현했습니다
 | **Backend** | Python, FastAPI |
 | **LLM** | OpenAI API (`gpt-4o-mini`) |
 | **Validation** | Pydantic |
-| **현재 상태** | 기존 구현 코드 재검증 진행 중 |
-| **현재 공개 범위** | React UI, FastAPI API, OpenAI 호출, JSON Parsing, Pydantic Schema |
-| **미확인 범위** | 현재 환경에서의 End-to-End 재실행 및 테스트 결과 |
+| **현재 상태** | GitHub 코드 기준 로컬 재검증 완료 |
+| **현재 검증 범위** | Backend·Frontend 로컬 실행, OpenAI API 호출, End-to-End 흐름, Production Build, ESLint |
+| **별도 확인 사항** | Hugging Face 배포 Backend는 별도 Space 저장소의 이전 구현으로, 현재 GitHub Backend와 코드 버전이 다름 |
 
 ---
 
@@ -136,8 +136,9 @@ AI웹융합 과제에서 다음 영역을 구성했습니다.
 - Frontend와 Backend 연결
 - 결과 화면 Rendering 구조
 
-현재는 기존 구현을 다시 실행하면서
-각 코드의 역할을 직접 설명하고 수정·검증할 수 있는 상태로 재확인하고 있습니다.
+기존 구현을 다시 실행하며 각 코드의 역할을 재확인했고,
+Backend·Frontend 로컬 실행과 OpenAI API 호출, End-to-End 흐름을 직접 재검증했습니다.
+또한 Frontend API URL을 환경별로 분리하고, 수정 후 Build·Lint·실행 결과까지 확인했습니다.
 
 ---
 
@@ -347,11 +348,13 @@ npm run dev
 http://localhost:5173
 ```
 
-현재 이 명령과 전체 End-to-End 흐름은
-**Re-validation in Progress** 상태입니다.
+현재 GitHub 코드 기준으로 Backend와 Frontend를 로컬에서 다시 실행했고,
+사용자 입력 → React → FastAPI → OpenAI API → FastAPI 응답 → React Rendering까지
+End-to-End 흐름을 직접 재검증했습니다.
 
-직접 재실행이 완료되기 전까지
-현재 환경에서 정상 동작을 재검증했다고 표시하지 않습니다.
+Frontend는 Production Build와 ESLint도 통과했으며,
+개발 환경에서는 로컬 FastAPI를, Production Build에서는 기존 Hugging Face Backend를 사용하도록
+API URL을 환경별로 분리했습니다.
 
 ---
 
@@ -401,15 +404,13 @@ Repository 코드에서 현재 확인되는 범위:
 
 ### Limitations
 
-- 현재 Repository에는 자동 테스트 코드가 확인되지 않습니다.
-- 현재 환경에서 Backend / Frontend End-to-End 재실행은 아직 완료되지 않았습니다.
-- 실제 OpenAI API 응답에 대한 재검증이 진행 중입니다.
-- JSON 형식 준수를 Prompt에 의존합니다.
-- malformed JSON은 Parsing 오류로 처리됩니다.
-- OpenAI API와 Validation 오류가 세분화되어 있지 않습니다.
-- Frontend의 Backend URL이 코드에 직접 지정되어 있습니다.
-- `API_BASE_URL` 변수가 선언되어 있지만 현재 `fetch()`에서는 직접 사용되지 않습니다.
-- Backend CORS 허용 Origin은 현재 `http://localhost:5173`으로 제한되어 있습니다.
+- 현재 Repository에는 자동화 테스트 코드가 없습니다.
+- LLM의 JSON 형식 준수를 Prompt에 의존하며, malformed JSON은 Parsing 오류로 처리됩니다.
+- OpenAI API 호출 오류와 응답 Parsing / Validation 오류가 세분화되어 있지 않습니다.
+- 현재 GitHub Backend의 CORS 허용 Origin은 `http://localhost:5173`으로 제한되어 있습니다.
+- Frontend API URL은 환경변수(`VITE_API_BASE_URL`)로 분리했지만, Production Build의 기본 Backend는 기존 Hugging Face Space를 사용합니다.
+- 현재 GitHub Backend와 Hugging Face에 배포된 Backend는 서로 다른 코드 버전입니다.
+- 현재 확인한 범위에서는 GitHub `main` Push와 Hugging Face Space 배포가 자동으로 동일 버전으로 동기화되지 않습니다.
 - 사용자 계정 기능이 없습니다.
 - 사용자 기록을 저장하는 Database가 없습니다.
 - 의료적 진단이나 치료를 제공하는 서비스가 아닙니다.
@@ -417,15 +418,11 @@ Repository 코드에서 현재 확인되는 범위:
 ### Next Steps
 
 ```text
-Backend 직접 재실행
-→ POST /analyze 요청 확인
-→ OpenAI 실제 응답 확인
-→ Frontend 직접 재실행
-→ Frontend ↔ Backend End-to-End 확인
-→ Backend URL 환경변수 분리
-→ 오류 처리 세분화
-→ API 테스트 추가
-→ README 실행 결과 갱신
+자동화 API 테스트 추가
+→ OpenAI / Parsing / Validation 오류 처리 세분화
+→ GitHub Backend와 Hugging Face 배포 버전 정합성 검토
+→ 배포 방식 및 동기화 절차 문서화
+→ Dependency 버전 고정 검토
 ```
 
 ---
