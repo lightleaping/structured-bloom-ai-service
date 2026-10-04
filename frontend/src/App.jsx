@@ -49,10 +49,12 @@ function App() {
     setLoading(true);
     setResult(null);
 
-    const API_BASE_URL = "https://skyleaping-structured-bloom-api.hf.space";
+    const API_BASE_URL =
+      import.meta.env.VITE_API_BASE_URL ||
+      "https://skyleaping-structured-bloom-api.hf.space";
 
     try {
-      const response = await fetch("https://skyleaping-structured-bloom-api.hf.space/analyze", {
+      const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
